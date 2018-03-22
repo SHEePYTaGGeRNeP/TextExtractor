@@ -1,0 +1,74 @@
+﻿<Window x:Class="Text_Extractor_WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Text_Extractor_WPF"
+        mc:Ignorable="d"
+        Title="Text Extractor" Height="450" Width="800">
+    
+    <Grid Background="AliceBlue"> <!-- Main Grid-->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <GroupBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Margin="5,0,5,5">
+            <GroupBox.Header>
+                <TextBlock FontWeight="Bold" Text="Setup"></TextBlock>
+            </GroupBox.Header>
+            <Grid Background="AliceBlue"> <!--Setup Grid-->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Label Grid.Row="0" Grid.Column="0" Content="Search pattern" VerticalAlignment="Bottom" />
+                <TextBox x:Name="tbSearchPattern" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="1" Text="&lt;" 
+                        MinWidth="150" TextWrapping="Wrap" Margin="5,0,5,5" MinHeight="40" AcceptsReturn="true"/>
+                <Line Grid.Row="0" Grid.Column="1" Width="100" />
+                <Label Grid.Row="0" Grid.Column="2" Content="Search type" VerticalAlignment="Bottom" />
+                <ComboBox x:Name="cbSearchType" Grid.Row="1" Grid.Column="2" MinWidth="150" Margin="5,0,5,5"/>
+                
+                <Label Grid.Row="2" Grid.Column="2" Content="Trim settings" VerticalAlignment="Bottom" />
+                <ComboBox x:Name="cbTrim" Grid.Row="3" Grid.Column="2" Margin="5,0,5,5"/>
+                
+                <Label Grid.Row="0" Grid.Column="3" Content="String Comparison" VerticalAlignment="Bottom" />
+                <ComboBox x:Name="cbStringComparison" Grid.Row="1" Grid.Column="3" Margin="5,0,5,5"/>
+                <Label Grid.Row="2" Grid.Column="3" Content="Regex Options" VerticalAlignment="Bottom" />
+                <ComboBox x:Name="cbRegexOptions" Grid.Row="3" Grid.Column="3" Margin="5,0,5,5"/>
+            </Grid>
+        </GroupBox>
+
+        <Label Grid.Row="1" Grid.Column="0" Content="Text to search or paths to filenames" VerticalAlignment="Bottom" />
+        <TextBox x:Name="tbIn" Grid.Row="2" Grid.Column="0" Grid.RowSpan="3" AcceptsReturn="True" 
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="5,0,5,5" UndoLimit="5" />
+
+        <Label Grid.Row="1" Grid.Column="1" Content="Seperators (new line each)&#10;Does not work for paths" VerticalAlignment="Bottom" />
+        <TextBox x:Name="tbSeperators" Grid.Row="2" Grid.Column="1" Text="grw" MinHeight="100" MinWidth="150" AcceptsReturn="True"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="5,0,5,5"/>
+        <Button x:Name="btnStart" Grid.Row="3" Grid.Column="1"  Content="Start" Margin="5" Click="Button_Click" FontSize="20"/>
+        <ProgressBar x:Name="pbProgress" Grid.Row="4" Grid.Column="1" Height="20" Margin="5" Minimum="0" Maximum="100"/>
+        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ElementName=pbProgress, Path=Value, StringFormat={}{0:0}%}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        
+        <Label Grid.Row="1" Grid.Column="2" Content="Output" VerticalAlignment="Bottom"  />
+        <TextBox x:Name="tbOut" Grid.Row="2" Grid.Column="2" Grid.RowSpan="3" AcceptsReturn="True" 
+               UndoLimit="5"  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="5,0,5,5" 
+                 Background="LightGray" IsReadOnly="true" />
+    </Grid>
+</Window>
