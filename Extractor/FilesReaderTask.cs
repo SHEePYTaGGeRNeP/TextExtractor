@@ -16,7 +16,7 @@ namespace LorenzoExtractor
 
         private Thread _readThread;
 
-        public bool IsRunning { get; private set; }
+        public InterlockedBool IsRunning { get; private set; } = false;
 
         public BlockingCollection<IEnumerable<string>> Input { get; private set; } = new BlockingCollection<IEnumerable<string>>(3);
 
@@ -24,12 +24,14 @@ namespace LorenzoExtractor
         {
             this._isCancelRequested = true;
             this._readThread?.Join();
+            this.IsRunning = false;
         }
 
         public void Start(string[] paths)
         {
             if (this.IsRunning)
                 this.Stop();
+            this.IsRunning = true;
             this._readThread = new Thread(() => this.ReadFiles(paths))
             {
                 Name = "Read files",

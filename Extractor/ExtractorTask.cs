@@ -17,7 +17,7 @@ namespace LorenzoExtractor
 
         private Thread _taskThread;
 
-        public bool IsRunning { get; private set; }
+        public InterlockedBool IsRunning { get; private set; } = false;
 
         private FilesReaderTask _filesReaderTask;
 
@@ -31,12 +31,14 @@ namespace LorenzoExtractor
                     this._filesReaderTask.Stop();
             this._cts.Cancel();
             this._taskThread?.Join();
+            this.IsRunning = false;
         }
 
         public void Start(string inputText, string seperators, string pattern, SearchParameters searchParameters, Action<IEnumerable<string>> callback)
         {
             if (this.IsRunning)
                 this.Stop();
+            this.IsRunning = true;
             this._cts = new CancellationTokenSource();
             Thread taskThread = new Thread(() =>
             {
@@ -51,7 +53,7 @@ namespace LorenzoExtractor
                 IEnumerable<string> output;
                 switch (searchParameters.SearchType)
                 {
-                    case SearchType.Starts_With:
+                    case SearchType.StartsWith:
                         output = StartsWith(trimmed, pattern, searchParameters.StringComparison, this._cts.Token);
                         break;
                     case SearchType.Contains:
@@ -59,6 +61,9 @@ namespace LorenzoExtractor
                         break;
                     case SearchType.Regex:
                         output = SearchRegex(trimmed, pattern, searchParameters.RegexOptions, this._cts.Token);
+                        break;
+                    case SearchType.Test:
+                        output = StartsWithTest(trimmed, pattern, searchParameters.StringComparison, this._cts.Token);
                         break;
                     default: throw new Exception("New SearchType");
                 }
@@ -97,7 +102,7 @@ namespace LorenzoExtractor
                     Console.WriteLine("finished trimming");
                     switch (searchParameters.SearchType)
                     {
-                        case SearchType.Starts_With:
+                        case SearchType.StartsWith:
                             output.AddRange(StartsWith(trimmed, pattern, searchParameters.StringComparison, this._cts.Token));
                             break;
                         case SearchType.Contains:
@@ -105,6 +110,9 @@ namespace LorenzoExtractor
                             break;
                         case SearchType.Regex:
                             output.AddRange(SearchRegex(trimmed, pattern, searchParameters.RegexOptions, this._cts.Token));
+                            break;
+                        case SearchType.Test:
+                            output.AddRange(StartsWithTest(trimmed, pattern, searchParameters.StringComparison, this._cts.Token));
                             break;
                         default: throw new Exception("New SearchType");
                     }

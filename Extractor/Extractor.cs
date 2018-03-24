@@ -15,7 +15,7 @@ namespace LorenzoExtractor
     {
         public const string NEW_LINE_COMBOBOX = "New Line";
 
-        public enum SearchType { Starts_With, Contains, Regex }
+        public enum SearchType { StartsWith, Contains, Regex, Test }
         public enum TrimSetting { None, TrimAll, TrimBegin, TrimEnd }
 
         public class SearchParameters
@@ -40,7 +40,6 @@ namespace LorenzoExtractor
         private static ExtractorTask _extractorTask;
         private static Action<IEnumerable<string>> _callback;
 
-
         public static void StartSearch(string inputText, string seperatorsText, string pattern, SearchParameters searchParameters, Action<IEnumerable<string>> callback)
         {
             Init();
@@ -55,10 +54,14 @@ namespace LorenzoExtractor
         }
         private static void Init()
         {
-            if (_extractorTask != null)
-                if (_extractorTask.IsRunning)
-                    _extractorTask.Stop();
+            CancelSearch();
             _extractorTask = new ExtractorTask();
+        }
+        public static void CancelSearch()
+        {
+            if (_extractorTask == null) return;
+            if (_extractorTask.IsRunning)
+                _extractorTask.Stop();
         }
 
         private static void OnTaskFinished(IEnumerable<string> output)
@@ -78,38 +81,6 @@ namespace LorenzoExtractor
             return result;
         }
 
-        public static async Task<string[]> SearchAsync(IEnumerable<string> input, string pattern, SearchParameters searchParameters, CancellationToken cancelToken)
-        {
-            Task<string[]> task = Task.Run(() =>
-            {
-                try
-                {
-                    IEnumerable<string> trimmed = Trim(input, searchParameters.TrimSetting);
-                    switch (searchParameters.SearchType)
-                    {
-                        case SearchType.Starts_With:
-                            return StartsWith(trimmed, pattern, searchParameters.StringComparison, cancelToken);
-                        case SearchType.Contains:
-                            return Contains(trimmed, pattern, searchParameters.StringComparison, cancelToken);
-                        case SearchType.Regex:
-                            return SearchRegex(trimmed, pattern, searchParameters.RegexOptions, cancelToken);
-                        default: return null;
-                    }
-                }
-                catch (OperationCanceledException oce)
-                {
-                    Console.WriteLine(oce is TaskCanceledException ? "Running Task was canceled." : "Scheduled Task was canceled");
-                    return null;
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-            }, cancelToken);
-            await Task.WhenAll(new[] { task });
-            Console.WriteLine("Task completed");
-            return task.Result;
-        }
         public static IEnumerable<string> Trim(IEnumerable<string> input, TrimSetting trimSetting)
         {
             switch (trimSetting)
@@ -122,11 +93,16 @@ namespace LorenzoExtractor
             }
         }
 
-        public static string[] StartsWith(IEnumerable<string> input, string pattern, StringComparison stringComparison, CancellationToken cancelToken)
+        public static IEnumerable<string> StartsWith(IEnumerable<string> input, string pattern, StringComparison stringComparison, CancellationToken cancelToken)
+        {
+            return input.TakeWhile(s => !cancelToken.IsCancellationRequested).Where(s => s.StartsWith(pattern, stringComparison));
+        }
+        public static string[] StartsWithTest(IEnumerable<string> input, string pattern, StringComparison stringComparison, CancellationToken cancelToken)
         {
             List<string> output = new List<string>();
             foreach (string s in input)
             {
+                Thread.Sleep(100);
                 if (cancelToken.IsCancellationRequested)
                     break;
                 if (!s.StartsWith(pattern, stringComparison))
@@ -137,29 +113,11 @@ namespace LorenzoExtractor
         }
         public static string[] Contains(IEnumerable<string> input, string pattern, StringComparison stringComparison, CancellationToken cancelToken)
         {
-            List<string> output = new List<string>();
-            foreach (string s in input)
-            {
-                if (cancelToken.IsCancellationRequested)
-                    break;
-                if (s.IndexOf(pattern, stringComparison) < 0)
-                    continue;
-                output.Add(s);
-            }
-            return output.ToArray();
+            return input.TakeWhile(s => !cancelToken.IsCancellationRequested).Where(s => s.IndexOf(pattern, stringComparison) >= 0).ToArray();
         }
         public static string[] SearchRegex(IEnumerable<string> input, string pattern, RegexOptions regexOptions, CancellationToken cancelToken)
         {
-            List<string> output = new List<string>();
-            foreach (string s in input)
-            {
-                if (cancelToken.IsCancellationRequested)
-                    break;
-                if (!Regex.IsMatch(s, pattern, regexOptions))
-                    continue;
-                output.Add(s);
-            }
-            return output.ToArray();
+            return input.TakeWhile(s => !cancelToken.IsCancellationRequested).Where(s => Regex.IsMatch(s, pattern, regexOptions)).ToArray();
         }
     }
 }
