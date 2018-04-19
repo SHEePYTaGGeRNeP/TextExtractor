@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.IO;
 using LorenzoExtractor.Helpers;
 using System.Collections.Concurrent;
@@ -18,7 +15,9 @@ namespace LorenzoExtractor
 
         public InterlockedBool IsRunning { get; private set; } = false;
 
-        public BlockingCollection<IEnumerable<string>> Input { get; private set; } = new BlockingCollection<IEnumerable<string>>(3);
+        public BlockingCollection<string> Input { get; private set; } = new BlockingCollection<string>(10000);
+
+        public long TotalFileLengths { get; private set; }
 
         public void Stop()
         {
@@ -42,11 +41,18 @@ namespace LorenzoExtractor
 
         public void ReadFiles(string[] paths)
         {
+            TotalFileLengths = 0;
+            foreach (string path in paths)
+                using (FileStream fs = File.OpenRead(path))
+                    TotalFileLengths += fs.Length;
             foreach (string path in paths)
             {
                 if (this._isCancelRequested)
                     break;
-               this.Input.Add(File.ReadLines(path, Encoding.UTF8));
+                foreach (string line in File.ReadLines(path, Encoding.UTF8))
+                {
+                    this.Input.Add(line);    
+                }
             }
             this.Input.CompleteAdding();
         }

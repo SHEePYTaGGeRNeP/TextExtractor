@@ -1,13 +1,14 @@
-﻿using System;
-using System.Windows;
-using System.Linq;
+﻿using LorenzoExtractor;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
-using LorenzoExtractor.Helpers;
-using LorenzoExtractor;
-using System.Threading.Tasks;
+using System.Windows;
+using System.IO;
+using System.Windows.Documents;
+using System.Linq;
+using System.Text;
 
 namespace Text_Extractor_WPF
 {
@@ -16,37 +17,76 @@ namespace Text_Extractor_WPF
     /// </summary>
     public partial class MainWindow : Window
     {
+        private const string _VERSION = "v0.1";
         private const string _START = "Start";
         private const string _CANCEL = "Cancel";
 
-        // TODO: Directory / files
-        
         public MainWindow()
         {
             this.InitializeComponent();
             this.Init();
         }
 
+
         private void Init()
         {
+            Extractor.PROGRESS_MAX = this.pbProgress.Maximum;
             foreach (string e in Enum.GetNames(typeof(Extractor.SearchType)))
                 this.cbSearchType.Items.Add(e);
             foreach (string e in Enum.GetNames(typeof(StringComparison)))
                 this.cbStringComparison.Items.Add(e);
             foreach (string e in Enum.GetNames(typeof(Extractor.TrimSetting)))
                 this.cbTrim.Items.Add(e);
+            foreach (string e in Enum.GetNames(typeof(Extractor.SplitSettings)))
+                this.cbSplit.Items.Add(e);
             foreach (string e in Enum.GetNames(typeof(RegexOptions)))
                 this.cbRegexOptions.Items.Add(e);
 
-            this.cbSearchType.SelectedIndex = (int)Extractor.SearchType.StartsWith;
+            this.cbSearchType.SelectedIndex = (int)Extractor.SearchType.Regex;
             this.cbTrim.SelectedIndex = (int)Extractor.TrimSetting.TrimAll;
+            this.cbSplit.SelectedIndex = (int)Extractor.SplitSettings.Regex;
             this.cbStringComparison.SelectedIndex = (int)StringComparison.OrdinalIgnoreCase;
             this.cbRegexOptions.SelectedIndex = (int)RegexOptions.IgnoreCase;
-            this.tbSeperators.Text = Extractor.NEW_LINE_COMBOBOX;
+            this.tbSeparators.Text = Extractor.NEW_LINE_COMBOBOX;
             this.btnStart.Content = _START;
+
+            ChangeTitle(false, false);
         }
 
-        private async void Button_Click(object sender, RoutedEventArgs e)
+        private void HandleRequestNavigate(object sender, RoutedEventArgs e)
+        {
+            var link = (Hyperlink)sender;
+            var uri = link.NavigateUri.ToString();
+            Process.Start(uri);
+            e.Handled = true;
+        }
+
+
+
+        private void CbSearchType_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {            
+            Extractor.SearchType searchType = (Extractor.SearchType)Enum.Parse(typeof(Extractor.SearchType), 
+                this.cbSearchType.SelectedItem.ToString());
+            switch (searchType)
+            {
+                case Extractor.SearchType.StartsWith:     
+                case Extractor.SearchType.Contains:
+                    this.spRegex.Visibility = Visibility.Collapsed;
+                    this.spStringCompare.Visibility = Visibility.Visible;
+                    break;
+                default:
+                case Extractor.SearchType.Regex:
+                    this.spRegex.Visibility = Visibility.Visible;
+                    this.spStringCompare.Visibility = Visibility.Collapsed;
+                    break;
+                case Extractor.SearchType.Test:
+                    this.spRegex.Visibility = Visibility.Collapsed;
+                    this.spStringCompare.Visibility = Visibility.Visible;
+                    break;   
+            }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -71,12 +111,24 @@ namespace Text_Extractor_WPF
                 Extractor.TrimSetting trimSetting = (Extractor.TrimSetting)Enum.Parse(typeof(Extractor.TrimSetting), dropdownValue);
                 dropdownValue = this.cbRegexOptions.SelectedItem.ToString();
                 RegexOptions regexOptions = (RegexOptions)Enum.Parse(typeof(RegexOptions), dropdownValue);
+                dropdownValue = this.cbSplit.SelectedItem.ToString();
+                Extractor.SplitSettings splitSettings = (Extractor.SplitSettings)Enum.Parse(typeof(Extractor.SplitSettings), dropdownValue);
 
                 Extractor.SearchParameters searchParameters = new Extractor.SearchParameters(stringComparison,
-                    searchType, trimSetting, regexOptions);
+                    searchType, trimSetting, regexOptions, splitSettings);
 
                 this.btnStart.Content = _CANCEL;
-                Extractor.StartSearch(this.tbIn.Text, this.tbSeperators.Text, this.tbSearchPattern.Text, searchParameters, this.OnFinished);
+                string[] split = this.tbIn.Text.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+                if (System.IO.File.Exists(split[0]))
+                {
+                    ChangeTitle(true, true);
+                    Extractor.StartSearchFiles(split, this.tbSearchPattern.Text, searchParameters, this.OnUpdate);
+                }
+                else
+                {
+                    ChangeTitle(true, false);
+                    Extractor.StartSearch(this.tbIn.Text, this.tbSeparators.Text, this.tbSearchPattern.Text, searchParameters, this.OnUpdate);
+                }
             }
             catch (Exception ex)
             {
@@ -84,39 +136,28 @@ namespace Text_Extractor_WPF
             }
         }
 
-        private void OnFinished(IEnumerable<string> output)
+        private void OnUpdate(IEnumerable<string> output, double percDone)
         {
             void WorkAction()
             {
-                this.tbOut.Text += String.Join(Environment.NewLine, output);
-                this.btnStart.Content = _START;
-                this.pbProgress.Value = this.pbProgress.Maximum;
+                this.pbProgress.Value = percDone;
+                if (output != null)
+                    this.tbOut.Text += String.Join(Environment.NewLine, output);
+                if (percDone == this.pbProgress.Maximum)
+                    this.btnStart.Content = _START;
             }
-
-            this.tbOut.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, (Action) WorkAction);
+            this.tbOut.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.DataBind, (Action)WorkAction);
         }
 
-
-        public class OutputBinding : INotifyPropertyChanged
+        private void ChangeTitle(bool searching, bool paths)
         {
-            public event PropertyChangedEventHandler PropertyChanged;
-
-            private string _output;
-            public string Output
-            {
-                get => this._output;
-                set
-                {
-                    this._output = value;
-                    this.OnPropertyChanged(nameof(this.Output));
-                }
-            }
-
-            // Create the OnPropertyChanged method to raise the event
-            protected void OnPropertyChanged(string name)
-            {
-                this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-            }
-        }
+            var assembly = typeof(MainWindow).Assembly;
+            if (searching)
+                this.Title = String.Format("{0} - {1} - extractor{2}, GUI{3}", assembly.GetName().Name,
+                    paths ? "Searching files" : "Searching text", Extractor.VERSION, _VERSION);
+            else
+                this.Title = String.Format("{0} - extractor{1}, GUI{2}", assembly.GetName().Name,
+                    Extractor.VERSION, _VERSION);
+        }               
     }
 }

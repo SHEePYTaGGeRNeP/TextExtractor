@@ -1,7 +1,6 @@
 using System;
 using Xunit;
 using LorenzoExtractor;
-using LorenzoExtractor.Helpers;
 using System.Text.RegularExpressions;
 using System.Threading;
 namespace xUnit_Test_Project
@@ -11,23 +10,23 @@ namespace xUnit_Test_Project
         [Fact]
         private void Seperator_Empty()
         {
-            Assert.Equal(new string[0], Extractor.Seperate(String.Empty, String.Empty));
+            Assert.Equal(new string[0], Extractor.Split(String.Empty, String.Empty, Extractor.SplitSettings.NormalCaseSensitive));
         }
         [Fact]
         private void Seperator_One()
         {
-            Assert.Equal(new[] { "h", "i" }, Extractor.Seperate("h;i", ";"));
+            Assert.Equal(new[] { "h", "i" }, Extractor.Split("h;i", ";", Extractor.SplitSettings.NormalCaseSensitive));
         }
         [Fact]
         private void Seperator_NewLine()
         {
-            Assert.Equal(new[] { "h", "i" }, Extractor.Seperate(String.Format("h{0}i", Environment.NewLine), Extractor.NEW_LINE_COMBOBOX));
+            Assert.Equal(new[] { "h", "i" }, Extractor.Split(String.Format("h{0}i", Environment.NewLine), Extractor.NEW_LINE_COMBOBOX, Extractor.SplitSettings.NormalCaseSensitive));
         }
         [Fact]
         private void Multiple_Seperators()
         {
-            Assert.Equal(new[] { "h", "i", "there" }, Extractor.Seperate(String.Format("h{0}i;there", Environment.NewLine),
-                String.Format("{0}{1};", Extractor.NEW_LINE_COMBOBOX, Environment.NewLine)));
+            Assert.Equal(new[] { "h", "i", "there" }, Extractor.Split(String.Format("h{0}i;there", Environment.NewLine),
+                String.Format("{0}{1};", Extractor.NEW_LINE_COMBOBOX, Environment.NewLine), Extractor.SplitSettings.NormalCaseSensitive));
         }
     }
     public class StartsWithTests
